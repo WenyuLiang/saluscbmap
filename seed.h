@@ -6,7 +6,7 @@
 
 #include "sequence_batch.h"
 
-class Seed {
+ class Seed {
  public:
   Seed() = delete;
 
@@ -43,9 +43,8 @@ class Seed {
   // The hash of the kmer.
   uint64_t hash_ = 0;
 
-  // The high 31 bits save the sequence index in the sequence batch. The
-  // following 32 bits save the end position on that sequence. And the lowest 
-  // bit encodes the strand (0 for positive).
+  // The high 32 bits save the sequence index in the sequence batch. The
+  // following 32 bits save the end position on that sequence. 
   uint64_t hit_ = 0;
 };
 

@@ -1472,6 +1472,7 @@ extern "C" EdlibAlignConfig edlibNewAlignConfig(int k, EdlibAlignMode mode, Edli
 }
 
 extern "C" EdlibAlignConfig edlibDefaultAlignConfig(void) {
+    //return edlibNewAlignConfig(-1, EDLIB_MODE_HW, EDLIB_TASK_DISTANCE, NULL, 0); // Mode modified 
     return edlibNewAlignConfig(-1, EDLIB_MODE_NW, EDLIB_TASK_DISTANCE, NULL, 0);
 }
 

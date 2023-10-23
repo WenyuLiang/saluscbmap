@@ -15,7 +15,7 @@
 //     std::cout << std::endl;
 // }
 enum{
-    kmer_size = 21,
+    kmer_size = 9,
     offset = 0,
 };
 
@@ -31,6 +31,7 @@ int main(int argc, char * argv[]) {
     index.Construct(ref_batch.GetNumSequences(), ref_batch);
     //index.CheckIndex(ref_batch.GetNumSequences(), ref_batch);
     ref_batch.FinalizeLoading();
+    //exit(1);
      
     // --------------------------------------------construct index for reference---------------------------------------//
     
@@ -51,6 +52,7 @@ int main(int argc, char * argv[]) {
     }
     read_batch.FinalizeLoading();
     std::cout << "map: " << align.valid_mapping_count_ << std::endl;
+    std::cout << "unmap: " << align.invalid_mapping_count_ << std::endl;
     // write unmapped seq
     std::ofstream unmapped("unmapped.txt");
     for(const auto &read_name: align.unmapped_reads_) {

@@ -72,7 +72,7 @@ class Index {
                                              uint64_t read_hit) const;
 
   int kmer_size_ = 9;
-  int offset_ = 4;
+  int offset_ = 0;
   int length_ = 30;
   // Number of threads to build the index, which is not used right now.
   int num_threads_ = 1;

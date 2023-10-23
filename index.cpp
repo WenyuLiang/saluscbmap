@@ -7,15 +7,15 @@
 
 #include "seed.h"
 
-static inline void printBinary(uint64_t num) {
-    for (uint64_t i = 63; i != static_cast<uint64_t>(-1); --i) {
-        if (i == 31) {
-            std::cout << " ";
-        }
-        std::cout << ((num & (1ULL << i)) ? '1' : '0');
-    }
-    std::cout << "\n";
-}
+// static inline void printBinary(uint64_t num) {
+//     for (uint64_t i = 63; i != static_cast<uint64_t>(-1); --i) {
+//         if (i == 31) {
+//             std::cout << " ";
+//         }
+//         std::cout << ((num & (1ULL << i)) ? '1' : '0');
+//     }
+//     std::cout << "\n";
+// }
 
 void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
   const double real_start_time = GetRealTime();
@@ -89,7 +89,7 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
       break;
     }
 
-    occurrence_table_.push_back(seeds[mi].GetHit());
+    occurrence_table_.emplace_back(seeds[mi].GetHit());
     previous_lookup_hash = current_lookup_hash;
   }
   assert(num_nonsingletons + num_singletons == num_seeds);
@@ -152,8 +152,7 @@ void Index::CheckIndex(uint32_t num_sequences,
 int Index::GenerateCandidatePositions(MappingMetadata &mapping_metadata, SequenceBatch &ref, SequenceBatch &read, uint32_t &i) const {
   const size_t num_seeds = mapping_metadata.GetNumSeeds();
   const std::vector<Seed> &seeds = mapping_metadata.seed_; // seeds for a read
-  uint64_t count = 0;
-  uint64_t lookup_value = 0;
+  
   for (size_t mi = 0; mi < num_seeds; ++mi) {
     khiter_t khash_iterator =
         kh_get(k64, lookup_table_,
@@ -161,27 +160,31 @@ int Index::GenerateCandidatePositions(MappingMetadata &mapping_metadata, Sequenc
     if (khash_iterator == kh_end(lookup_table_)) {
       continue;
     }
-
+    const uint64_t read_hit = seeds[mi].GetHit(); 
     const uint64_t lookup_key = kh_key(lookup_table_, khash_iterator);
-    if (lookup_key&1) {
-      lookup_value = kh_value(lookup_table_, khash_iterator);
-    }else{
-      lookup_value = kh_value(lookup_table_, khash_iterator);
+    const uint64_t lookup_value = kh_value(lookup_table_, khash_iterator);
+    if (lookup_key&1) { 
+      const uint64_t candidate_position = GenerateCandidatePositionFromHits(
+          mapping_metadata, /*reference_hit=*/lookup_value, read_hit);
+      if (candidate_position == UINT64_MAX) {
+        continue;
+      }
+      mapping_metadata.positive_hits_.push_back(candidate_position); 
+    } else {  
+      //continue;
       uint32_t offset = GenerateOffsetInOccurrenceTable(lookup_value);
       uint32_t num_occ = GenerateNumOccurrenceInOccurrenceTable(lookup_value);
-      lookup_value = occurrence_table_[offset + count]; // need better name
-      ++count;
-      if (count == num_occ) {
-        count = 0;
+      for (uint32_t j = 0; j < num_occ; ++j) {
+        const uint64_t candidate_position = GenerateCandidatePositionFromHits(
+            mapping_metadata, /*reference_hit=*/occurrence_table_[offset + j],
+            read_hit);
+        if (candidate_position == UINT64_MAX) {
+        continue;
+      }
+        mapping_metadata.positive_hits_.push_back(candidate_position);
       }
     }
-    
     //std::cout << "reference_id: " << uint32_t(lookup_value>>32) << std::endl;
-    const uint64_t read_hit = seeds[mi].GetHit();
-    const uint64_t candidate_position = GenerateCandidatePositionFromHits(
-          mapping_metadata, /*reference_hit=*/lookup_value, read_hit);
-    
-    mapping_metadata.positive_hits_.push_back(candidate_position);   
   }
 
   std::sort(mapping_metadata.positive_hits_.begin(),
@@ -209,10 +212,16 @@ uint64_t Index::GenerateCandidatePositionFromHits(MappingMetadata &mapping_metad
   // For now we can't see the reference here. So let us don't validate this
   // candidate position. Instead, we do it later some time when we check the
   // candidates.
-  const uint32_t reference_start_position = reference_position - read_position;
-  const uint32_t reference_id = HitToSequenceIndex(reference_hit);
+  const int reference_start_position = reference_position - read_position;
+  const uint64_t reference_id = HitToSequenceIndex(reference_hit);
   //std::cout << "reference_id: " << uint32_t(reference_hit>>32) << "\t" <<"reference_position: " << reference_position << std::endl;
-  mapping_metadata.reference_hit_count_[uint32_t(reference_hit>>32)]++;
+
+  if (reference_start_position > 2 || reference_start_position < -2) {
+    //std::cout << "ref pos: " <<reference_position << " read pos: " << read_position<< " reference_start_position:" << reference_start_position << std::endl;
+    return UINT64_MAX;
+  } // filter out the candidates whose reference start position is too far away from the read start position
+  
+  mapping_metadata.reference_hit_count_[reference_id]++;
   return SequenceIndexAndPositionToCandidatePosition(reference_id,
                                                      reference_start_position);
 }
