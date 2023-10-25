@@ -1,13 +1,13 @@
 #pragma once
+#include "hit_utils.h"
 #include <cassert>
 #include <cstdint>
 #include <vector>
-#include "hit_utils.h"
 
 #include "sequence_batch.h"
 
- class Seed {
- public:
+class Seed {
+public:
   Seed() = delete;
 
   Seed(std::pair<uint64_t, uint64_t> seed)
@@ -39,23 +39,23 @@
     return false;
   }
 
- private:
+private:
   // The hash of the kmer.
   uint64_t hash_ = 0;
 
   // The high 32 bits save the sequence index in the sequence batch. The
-  // following 32 bits save the end position on that sequence. 
+  // following 32 bits save the end position on that sequence.
   uint64_t hit_ = 0;
 };
 
 class SeedGenerator {
- public:
+public:
   SeedGenerator() = delete;
-    // offset: offset from both ends of the sequence
-    // kmer_size_: size of the k-mer
-    // length: length of the sequence
-  SeedGenerator(int offset, int kmer_size_, int length)
-      : offset_(offset), kmer_size_(kmer_size_), length_(length) {
+  // offset: offset from both ends of the sequence
+  // kmer_size_: size of the k-mer
+  // length: length of the sequence
+  SeedGenerator(int offset, int kmer_size_, int winsize, int length)
+      : offset_(offset), kmer_size_(kmer_size_), winsize_(winsize), length_(length) {
     // 56 bits for a k-mer. So the max kmer size is 28.
     assert(kmer_size_ > 0 && kmer_size_ <= 28);
   }
@@ -63,11 +63,11 @@ class SeedGenerator {
   ~SeedGenerator() = default;
 
   void GenerateSeeds(const SequenceBatch &sequence_batch,
-                          uint32_t sequence_index,
-                          std::vector<Seed> &Seeds) const;
+                     uint32_t sequence_index, std::vector<Seed> &Seeds) const;
 
- private:
+private:
   const int offset_;
   const int kmer_size_;
+  const int winsize_;
   const int length_;
 };

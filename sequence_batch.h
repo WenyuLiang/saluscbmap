@@ -2,16 +2,16 @@
 #ifndef SEQUENCEBATCH_H_
 #define SEQUENCEBATCH_H_
 
-#include <unistd.h>
-#include <zlib.h>
-#include <iostream>
-#include <string>
-#include <vector>
 #include "kseq.h"
 #include "utils.h"
+#include <iostream>
+#include <string>
+#include <unistd.h>
+#include <vector>
+#include <zlib.h>
 
 class SequenceBatch {
- public:
+public:
   KSEQ_INIT(gzFile, gzread);
 
   SequenceBatch() {}
@@ -30,13 +30,12 @@ class SequenceBatch {
 
   void LoadAllSequences();
 
-
   inline uint64_t GetNumBases() const { return num_bases_; }
 
   inline std::vector<kseq_t *> &GetSequenceBatch() { return sequence_batch_; }
 
   inline uint64_t GetNumSequences() const { return num_loaded_sequences_; }
-  
+
   inline const char *GetSequenceAt(uint32_t sequence_index) const {
     return sequence_batch_[sequence_index]->seq.s;
   }
@@ -60,7 +59,7 @@ class SequenceBatch {
     return sequence_batch_[sequence_index]->id;
   }
 
- private:
+private:
   uint32_t total_num_loaded_sequences_ = 0;
   uint32_t num_loaded_sequences_ = 0;
   uint64_t num_bases_ = 0;
@@ -69,4 +68,4 @@ class SequenceBatch {
   std::vector<kseq_t *> sequence_batch_;
 };
 
-#endif  // SEQUENCEBATCH_H_
+#endif // SEQUENCEBATCH_H_

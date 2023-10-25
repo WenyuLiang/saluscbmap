@@ -206,9 +206,7 @@ static const double __ac_HASH_UPPER = 0.77;
 	extern khint_t kh_get_##name(const kh_##name##_t *h, khkey_t key); 	\
 	extern int kh_resize_##name(kh_##name##_t *h, khint_t new_n_buckets); \
 	extern khint_t kh_put_##name(kh_##name##_t *h, khkey_t key, int *ret); \
-	extern void kh_del_##name(kh_##name##_t *h, khint_t x); \
-  extern void kh_load_##name(kh_##name##_t *h, FILE* fp); \
-  extern void kh_save_##name(kh_##name##_t *h, FILE* fp);
+	extern void kh_del_##name(kh_##name##_t *h, khint_t x);
 
 #define __KHASH_IMPL(name, SCOPE, khkey_t, khval_t, kh_is_map, __hash_func, __hash_equal) \
 	SCOPE kh_##name##_t *kh_init_##name(void) {							\
@@ -354,36 +352,7 @@ static const double __ac_HASH_UPPER = 0.77;
 			__ac_set_isdel_true(h->flags, x);							\
 			--h->size;													\
 		}																\
-	} \
-  SCOPE void kh_load_##name(kh_##name##_t *h, FILE* fp)\
-  {\
-    fread(&(h->n_buckets), sizeof(khint_t), 1, fp);\
-    fread(&(h->size), sizeof(khint_t), 1, fp);\
-    fread(&(h->n_occupied), sizeof(khint_t), 1, fp);\
-    fread(&(h->upper_bound), sizeof(khint_t), 1, fp);\
-    if (h->n_buckets)\
-    {\
-      h->flags = (khint32_t*)kmalloc(__ac_fsize(h->n_buckets) * sizeof(khint32_t));\
-      fread(h->flags, sizeof(khint32_t), __ac_fsize(h->n_buckets), fp);\
-      h->keys = (khkey_t*)kmalloc(sizeof(khkey_t)*h->n_buckets);\
-      fread(h->keys, sizeof(khkey_t), h->n_buckets, fp);\
-      h->vals = (khval_t*)kmalloc(sizeof(khval_t)*h->n_buckets);\
-      fread(h->vals, sizeof(khval_t), h->n_buckets, fp);\
-    }\
-  }\
-  SCOPE void kh_write_##name(kh_##name##_t *h, FILE* fp)\
-  {\
-    fwrite(&(h->n_buckets), sizeof(khint_t), 1, fp);\
-    fwrite(&(h->size), sizeof(khint_t), 1, fp);\
-    fwrite(&(h->n_occupied), sizeof(khint_t), 1, fp);\
-    fwrite(&(h->upper_bound), sizeof(khint_t), 1, fp);\
-    if (h->n_buckets)\
-    {\
-      fwrite(h->flags, sizeof(khint32_t), __ac_fsize(h->n_buckets), fp);\
-      fwrite(h->keys, sizeof(khkey_t), h->n_buckets, fp);\
-      fwrite(h->vals, sizeof(khval_t), h->n_buckets, fp);\
-    }\
-  }
+	}
 
 #define KHASH_DECLARE(name, khkey_t, khval_t)		 					\
 	__KHASH_TYPE(name, khkey_t, khval_t) 								\
@@ -606,9 +575,6 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
 		(vvar) = kh_val(h,__i);								\
 		code;												\
 	} }
-
-#define kh_load(name, h, fp)  kh_load_##name(h, fp)
-#define kh_save(name, h, fp)  kh_write_##name(h, fp)
 
 /* More convenient interfaces */
 

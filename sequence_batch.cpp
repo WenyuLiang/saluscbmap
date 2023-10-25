@@ -1,7 +1,7 @@
 // batch.cpp
 #include "sequence_batch.h"
-#include <tuple>
 #include "utils.h"
+#include <tuple>
 
 void SequenceBatch::InitializeLoading(const std::string &sequence_file_path) {
   sequence_file_ = gzopen(sequence_file_path.c_str(), "r");
@@ -29,11 +29,11 @@ void SequenceBatch::LoadAllSequences() {
       std::swap(sequence_kseq_->seq, sequence->seq);
       std::swap(sequence_kseq_->name, sequence->name);
       std::swap(sequence_kseq_->comment, sequence->comment);
-      if (sequence_kseq_->qual.l != 0) {  // fastq file
+      if (sequence_kseq_->qual.l != 0) { // fastq file
         std::swap(sequence_kseq_->qual, sequence->qual);
       }
       sequence->id = total_num_loaded_sequences_;
-      
+
       ++total_num_loaded_sequences_;
       ++num_loaded_sequences_;
       num_bases_ += length;
@@ -43,7 +43,8 @@ void SequenceBatch::LoadAllSequences() {
 
   // Make sure to reach the end of the file rather than meet an error.
   if (length != -1) {
-        std::cerr << "Didn't reach the end of sequence file, which might be corrupted!\n";
+    std::cerr
+        << "Didn't reach the end of sequence file, which might be corrupted!\n";
   }
 
   std::cerr << "Loaded all sequences successfully in "

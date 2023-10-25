@@ -1,8 +1,10 @@
 #ifndef INDEX_UTILS_H_
 #define INDEX_UTILS_H_
-
+#include <cstdint>
+#include <limits>
+#include <vector>
 #include "khash.h"
-
+#include <queue>
 // Note that the max kmer size is 28 and its hash value is always saved in the
 // lowest 56 bits of an unsigned 64-bit integer. When an element is inserted
 // into the hash table, its hash value is left shifted by 1 bit and the lowest
@@ -25,8 +27,9 @@ inline static uint64_t GenerateHashInLookupTable(uint64_t minimizer_hash) {
   return minimizer_hash << 1;
 }
 
-inline static uint64_t GenerateEntryValueInLookupTable(
-    uint64_t occurrence_table_offset, uint32_t num_occurrences) {
+inline static uint64_t
+GenerateEntryValueInLookupTable(uint64_t occurrence_table_offset,
+                                uint32_t num_occurrences) {
   return (occurrence_table_offset << 32) | num_occurrences;
 }
 
@@ -34,18 +37,19 @@ inline static uint32_t GenerateOffsetInOccurrenceTable(uint64_t lookup_value) {
   return lookup_value >> 32;
 }
 
-inline static uint32_t GenerateNumOccurrenceInOccurrenceTable(
-    uint64_t lookup_table_entry_value) {
+inline static uint32_t
+GenerateNumOccurrenceInOccurrenceTable(uint64_t lookup_table_entry_value) {
   return static_cast<uint32_t>(lookup_table_entry_value);
 }
 
-inline static uint64_t SequenceIndexAndPositionToCandidatePosition(
-    uint64_t sequence_id, uint32_t sequence_position) {
+inline static uint64_t
+SequenceIndexAndPositionToCandidatePosition(uint64_t sequence_id,
+                                            uint32_t sequence_position) {
   return (sequence_id << 32) | sequence_position;
 }
 
-inline static uint64_t GenerateCandidatePositionFromOccurrenceTableEntry(
-    uint64_t entry) {
+inline static uint64_t
+GenerateCandidatePositionFromOccurrenceTableEntry(uint64_t entry) {
   return entry >> 1;
 }
 
@@ -99,6 +103,5 @@ inline static void HeapMergeCandidatePositionLists(
     }
   }
 }
- 
 
-#endif  // INDEX_UTILS_H_
+#endif // INDEX_UTILS_H_

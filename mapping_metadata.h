@@ -1,12 +1,12 @@
 #ifndef MAPPING_METADATA_H_
 #define MAPPING_METADATA_H_
 
+#include "seed.h"
 #include <algorithm>
 #include <cstdio>
-#include <utility>
-#include <vector> 
-#include "seed.h"
 #include <map>
+#include <utility>
+#include <vector>
 struct Candidate {
   // The high 32 bits save the reference sequence index in the reference
   // sequence batch. The low 32 bits save the reference position on that
@@ -33,23 +33,21 @@ struct Candidate {
   }
 };
 
-
 class MappingMetadata {
- public:
-  
+public:
+  explicit MappingMetadata(int margin) : margin_(margin){};
+
   inline void PrepareForMappingNextRead(int reserve_size) {
     Clear();
     ReserveSpace(reserve_size);
   }
 
-  inline size_t GetNumSeeds() const {
-    return seed_.size();
-  }
+  inline size_t GetNumSeeds() const { return seed_.size(); }
 
   inline size_t GetNumPositiveCandidates() const {
     return positive_candidates_.size();
   }
-  
+
   inline void MoveCandidiatesToBuffer() {
     positive_candidates_.swap(positive_candidates_buffer_);
     positive_candidates_.clear();
@@ -78,23 +76,21 @@ class MappingMetadata {
   inline void SetNumSecondBestMappings(int num_second_best_mappings) {
     num_second_best_mappings_ = num_second_best_mappings;
   }
-  inline int GetNumRefHits() const {
-    return reference_hit_count_.size();
-  }
+  inline int GetNumRefHits() const { return reference_hit_count_.size(); }
 
-  //static std::vector<int> reference_hit_count_;
+  // static std::vector<int> reference_hit_count_;
 
   // protected:
   // inline void InitReferenceHitCount(uint32_t num_sequences) {
   //    reference_hit_count_ = std::vector<int>(num_sequences, 0);
   // }
 
-//  protected:
+  //  protected:
   inline void ReserveSpace(int reserve_size) {
     seed_.reserve(reserve_size);
-    positive_hits_.reserve(reserve_size); 
-    positive_candidates_.reserve(reserve_size); 
-    positive_candidates_buffer_.reserve(reserve_size); 
+    positive_hits_.reserve(reserve_size);
+    positive_candidates_.reserve(reserve_size);
+    positive_candidates_buffer_.reserve(reserve_size);
   }
 
   inline void Clear() {
@@ -106,8 +102,11 @@ class MappingMetadata {
   }
 
   int min_num_errors_, second_min_num_errors_;
+
   int num_best_mappings_, num_second_best_mappings_;
-  
+
+  const uint32_t margin_;
+
   std::vector<Seed> seed_;
 
   std::vector<uint64_t> positive_hits_;
@@ -117,7 +116,6 @@ class MappingMetadata {
   std::vector<Candidate> positive_candidates_buffer_;
 
   std::map<uint32_t, int> reference_hit_count_;
-   
 };
 
-#endif  // MAPPING_METADATA_H_
+#endif // MAPPING_METADATA_H_
