@@ -16,5 +16,5 @@ public:
   size_t valid_mapping_count_ = 0;
   size_t invalid_mapping_count_ = 0;
   const uint32_t edit_distance_ = 0;
-  std::vector<std::string> unmapped_reads_;
+  //std::vector<std::string> unmapped_reads_;
 };

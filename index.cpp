@@ -4,7 +4,7 @@
 
 #include <algorithm>
 #include <iostream>
-
+#include <omp.h>
 #include "seed.h"
 
 // static inline void printBinary(uint64_t num) {
@@ -25,12 +25,31 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
                 (reflen - 2 * offset_ - kmer_size_ + 1));
   std::cerr << "Collecting seeds.\n";
 
-  SeedGenerator seed_generator(offset_, kmer_size_, winsize_, length_);
-  for (uint32_t sequence_index = 0; sequence_index < num_sequences;
-       ++sequence_index) {
-    // std::cout << "sequence_index: " << sequence_index << std::endl;
-    seed_generator.GenerateSeeds(reference, sequence_index, seeds);
-  }
+  // SeedGenerator seed_generator(offset_, kmer_size_, winsize_, length_);
+  // for (uint32_t sequence_index = 0; sequence_index < num_sequences;
+  //      ++sequence_index) { 
+  //   seed_generator.GenerateSeeds(reference, sequence_index, seeds);
+  // } 
+std::vector<std::vector<Seed>> seeds_per_thread(num_threads_); 
+size_t estimated_size = reference.GetNumSequences() * (reflen - 2 * offset_ - kmer_size_ + 1) / num_threads_;
+
+for (auto& seed_vector : seeds_per_thread) {
+    seed_vector.reserve(estimated_size);
+}
+// Thread-local instance of SeedGenerator
+SeedGenerator local_seed_generator(offset_, kmer_size_, winsize_, length_);
+
+#pragma omp parallel for shared(seeds_per_thread)
+for (uint32_t sequence_index = 0; sequence_index < num_sequences; ++sequence_index) {
+    int thread_id = omp_get_thread_num();
+    local_seed_generator.GenerateSeeds(reference, sequence_index, seeds_per_thread[thread_id]);
+}
+ 
+// Merge seeds from all threads
+for (const auto& thread_seeds : seeds_per_thread) {
+    seeds.insert(seeds.end(), thread_seeds.begin(), thread_seeds.end());
+}
+
   std::cerr << "Collected " << seeds.size() << " seeds.\n";
   std::cerr << "Sorting seeds.\n";
   std::stable_sort(seeds.begin(), seeds.end());
@@ -41,7 +60,8 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
   // Here I make sure the # seeds is less than the limit of signed int32,
   // so that I can use int to store position later.
   assert(num_seeds <= static_cast<size_t>(INT_MAX));
-  kh_resize(k64, lookup_table_, num_seeds / 200);
+  occurrence_table_.reserve(num_seeds);
+  kh_resize(k64, lookup_table_, num_seeds>>8); //estimate the size of the hash table
   uint64_t previous_lookup_hash = GenerateHashInLookupTable(seeds[0].GetHash());
   uint32_t num_previous_seed_occurrences = 0;
   uint64_t num_nonsingletons = 0;
@@ -114,7 +134,8 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
 void Index::CheckIndex(uint32_t num_sequences,
                        const SequenceBatch &reference) const {
   std::vector<Seed> seeds;
-  seeds.reserve(264289970);
+  seeds.reserve(reference.GetNumSequences() *
+                (reflen - 2 * offset_ - kmer_size_ + 1));
   SeedGenerator seed_generator(offset_, kmer_size_, winsize_, length_);
   for (uint32_t sequence_index = 0; sequence_index < num_sequences;
        ++sequence_index) {

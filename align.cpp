@@ -13,8 +13,6 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
   bool isMapped = false;
   std::cout << "numRefHits: " << numRefHits << std::endl;
   if (numRefHits == 0) {
-    unmapped_reads_.emplace_back(read.GetSequenceAt(i));
-#pragma omp atomic
     invalid_mapping_count_++;
     return 0;
   }
@@ -29,25 +27,16 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
       result = edlibAlign(ref.GetSequenceAt(pair.first), 30,
                           read.GetSequenceAt(i), 30, edlibDefaultAlignConfig());
       if (result.status == EDLIB_STATUS_OK) {
-        // printf("edit_distance(%s, %s) = %d\n", ref.GetSequenceAt(pair.first),
-        // read.GetSequenceAt(i), result.editDistance);
+        printf("edit_distance(%s, %s) = %d\n", ref.GetSequenceAt(pair.first),
+        read.GetSequenceAt(i), result.editDistance);
         if (result.editDistance <= edit_distance_) {
           isMapped = true;
         }
       }
       edlibFreeAlignResult(result);
     }
-    if (!isMapped) {
-#pragma omp critical
-      { unmapped_reads_.emplace_back(read.GetSequenceAt(i)); }
-#pragma omp atomic
-      invalid_mapping_count_++;
-    }
-
-    if (isMapped) {
-#pragma omp atomic
-      valid_mapping_count_++;
-    }
+    if (!isMapped) invalid_mapping_count_++;
+    if (isMapped) valid_mapping_count_++;
     return numRefHits;
   } else if (numRefHits > 5) {
     int originalSize = mapping_metadata.reference_hit_count_.size();
@@ -75,12 +64,12 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
       if (result.status == EDLIB_STATUS_OK) {
         // std::cout<<"ref id: "<<ref_id<<"read id: "<<i<<std::endl;
         if (result.editDistance < edit_distance_) {
-          if (ref_count > 8) {
-            std::cout << "ref_count: " << ref_count << "all\t" << originalSize
-                      << std::endl;
+          // if (ref_count > 8) {
+          //   std::cout << "ref_count: " << ref_count << "all\t" << originalSize
+          //             << std::endl;
             printf("edit_distance(%s, %s) = %d\n", ref.GetSequenceAt(ref_id),
                    read.GetSequenceAt(i), result.editDistance);
-          }
+          //}
 
           isMapped = true;
           break;
@@ -90,16 +79,18 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
       topHits.pop();
       ref_count++;
     }
-    if (!isMapped) {
-#pragma omp critical
-      { unmapped_reads_.emplace_back(read.GetSequenceAt(i)); }
-#pragma omp atomic
-      invalid_mapping_count_++;
-    }
-    if (isMapped) {
-#pragma omp atomic
-      valid_mapping_count_++;
-    }
+    if (!isMapped) invalid_mapping_count_++;
+    if (isMapped) valid_mapping_count_++;
+//     if (!isMapped) {
+// #pragma omp critical
+//       { unmapped_reads_.emplace_back(read.GetSequenceAt(i)); }
+// #pragma omp atomic
+//       invalid_mapping_count_++;
+//     }
+//     if (isMapped) {
+// #pragma omp atomic
+//       valid_mapping_count_++;
+//     }
     return 3;
   }
   return -1;

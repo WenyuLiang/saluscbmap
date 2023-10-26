@@ -14,6 +14,7 @@ struct IndexParameters {
   int kmer_size = 9;
   int offset = 4;
   int winsize = 1;
+  int num_threads = 16;
   std::string reference_file_path;
   std::string index_output_file_path;
 };
@@ -33,6 +34,7 @@ public:
       : offset_(index_parameters.offset),
         kmer_size_(index_parameters.kmer_size),
         winsize_(index_parameters.winsize), 
+        num_threads_(index_parameters.num_threads),
         index_file_path_(index_parameters.index_output_file_path) {
     lookup_table_ = kh_init(k64);
   }
@@ -81,7 +83,7 @@ private:
   int winsize_ = 1;
   int length_ = 30;
   // Number of threads to build the index, which is not used right now.
-  int num_threads_ = 1;
+  int num_threads_ = 16;
   const std::string index_file_path_;
   khash_t(k64) *lookup_table_ = nullptr;
 

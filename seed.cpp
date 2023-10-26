@@ -5,7 +5,7 @@
 #include <cstring>
 #include <string> 
 
-constexpr uint64_t generateNumber(int n) { return (1 << n * 2) - 1; }
+constexpr uint64_t generateNumber(int n) { return (1 << (n * 2 + 1)) - 1; }
 
 void SeedGenerator::GenerateSeeds(const SequenceBatch &sequence_batch,
                                   uint32_t sequence_index,
@@ -18,8 +18,7 @@ void SeedGenerator::GenerateSeeds(const SequenceBatch &sequence_batch,
     return;
   }
   const uint64_t mask = (((uint64_t)1) << (2 * kmer_size_)) - 1;
-  const char *sequence = sequence_batch.GetSequenceAt(sequence_index);
-
+  const char *sequence = sequence_batch.GetSequenceAt(sequence_index); 
   // Define the start and end positions for k-mer generation.
   int start = offset_;
   int end = sequence_length - offset_ - kmer_size_ + 1;
@@ -60,11 +59,11 @@ void SeedGenerator::GenerateSeeds(const SequenceBatch &sequence_batch,
   } else
     std::cerr << "Fail to add seed\n";
 
-  int win_size = winsize_ ? winsize_ : 1;
-  uint64_t num_shifts = generateNumber(win_size);
+  
+  uint64_t num_shifts = generateNumber(winsize_);
   // Slide the window and compute subsequent k-mers.
   // for (uint32_t position = start + 1; position < end; ++position) {
-  for (uint32_t position = start + 1; position < end; position += win_size) {
+  for (uint32_t position = start + 1; position < end; position += winsize_) {
     // Remove the leftmost base of the previous k-mer.
     // seed &= ~(((uint64_t)3) << (2 * (kmer_size_ - 1)));
     seed &= ~(((uint64_t)num_shifts) << (2 * (kmer_size_ - 1)));
@@ -73,7 +72,7 @@ void SeedGenerator::GenerateSeeds(const SequenceBatch &sequence_batch,
         CharToUint8(sequence[position + kmer_size_ - 1]);
     // seed = (seed << 2) | current_base;
 
-    for (int i = 0; i < win_size; i++) {
+    for (int i = 0; i < winsize_; i++) {
       if (current_base < 4) {
         seed = (seed << 2) | current_base;
         seed_pair.first = Hash64(seed, mask);
