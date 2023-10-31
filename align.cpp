@@ -1,96 +1,106 @@
 #include "align.h"
 #include "edlib.h"
-
+#include <cstdio>
+#include <algorithm>
 bool Align::cmp(const std::pair<uint32_t, int> &left,
                 const std::pair<uint32_t, int> &right) {
   return left.second < right.second;
 }
 
 int Align::CandidateRef(const MappingMetadata &mapping_metadata,
-                        const SequenceBatch &ref, SequenceBatch &read,
+                        SequenceBatch &ref, SequenceBatch &read,
                         uint32_t &i) {
-  int numRefHits = mapping_metadata.GetNumRefHits();
+  const int numRefHits = mapping_metadata.GetNumRefHits();
   bool isMapped = false;
-  std::cout << "numRefHits: " << numRefHits << std::endl;
+  const int candidateLimit = 50;
+  int candidateCount = 0;
+  uint32_t flag = 0;
+  
+  std::vector<TripleType> repeat_hits;
+  repeat_hits.reserve(candidateLimit); // random estimate
+  //std::cout << "numRefHits: " << numRefHits << std::endl;
   if (numRefHits == 0) {
     invalid_mapping_count_++;
     return 0;
   }
-  std::vector<EdlibAlignResult> alignments;
-  alignments.reserve(numRefHits);
   EdlibAlignResult result;
-  if (numRefHits > 0 && numRefHits <= 5) {
-    for (const auto &pair : mapping_metadata.reference_hit_count_) {
-      // std::cout << "reference_id: " << pair.first  << " reference_seq: " <<
-      // ref.GetSequenceAt(pair.first)<< " count: " << pair.second << "\n" <<
-      // std::endl;
-      result = edlibAlign(ref.GetSequenceAt(pair.first), 30,
-                          read.GetSequenceAt(i), 30, edlibDefaultAlignConfig());
-      if (result.status == EDLIB_STATUS_OK) {
-        printf("edit_distance(%s, %s) = %d\n", ref.GetSequenceAt(pair.first),
-        read.GetSequenceAt(i), result.editDistance);
-        if (result.editDistance <= edit_distance_) {
-          isMapped = true;
-        }
-      }
-      edlibFreeAlignResult(result);
-    }
-    if (!isMapped) invalid_mapping_count_++;
-    if (isMapped) valid_mapping_count_++;
-    return numRefHits;
-  } else if (numRefHits > 5) {
-    int originalSize = mapping_metadata.reference_hit_count_.size();
+  if (numRefHits > 0) {
     std::priority_queue<std::pair<int, uint32_t>,
                         std::vector<std::pair<int, uint32_t>>,
                         decltype(&Align::cmp)>
         topHits(Align::cmp);
-    // std::priority_queue<std::pair<int, uint32_t>, std::vector<std::pair<int,
-    // uint32_t>>, myComp> topHits;
     for (const auto &pair : mapping_metadata.reference_hit_count_) {
-      // std::cout << "first: " << pair.first << " second: " << pair.second <<
-      // std::endl; if(pair.second >3)
       topHits.push({pair.first, pair.second});
-      // if (topHits.size() > 15) {
-      //     topHits.pop();
-      // }
-    }
-    uint32_t ref_count = 0;
+    } 
     while (!topHits.empty()) {
       const auto &[ref_id, count_] = topHits.top();
-      // std::cout << "ref_id: " << ref_id << " count: " << count_ << std::endl;
-      result = edlibAlign(ref.GetSequenceAt(ref_id), 30, read.GetSequenceAt(i),
-                          30, edlibDefaultAlignConfig());
+      result = edlibAlign(ref.GetSequenceAt(ref_id), ref.GetSequenceLengthAt(ref_id), read.GetSequenceAt(i),
+                          read.GetSequenceLengthAt(i), edlibDefaultAlignConfig());
 
       if (result.status == EDLIB_STATUS_OK) {
-        // std::cout<<"ref id: "<<ref_id<<"read id: "<<i<<std::endl;
-        if (result.editDistance < edit_distance_) {
-          // if (ref_count > 8) {
-          //   std::cout << "ref_count: " << ref_count << "all\t" << originalSize
-          //             << std::endl;
-            printf("edit_distance(%s, %s) = %d\n", ref.GetSequenceAt(ref_id),
-                   read.GetSequenceAt(i), result.editDistance);
-          //}
+        if (result.editDistance == 0) {
+          valid_mapping_count_++;
+          edlibFreeAlignResult(result);
+          return 1;
+        } else if (result.editDistance > 0 && result.editDistance < edit_distance_) { 
+          // printf("edit_distance(%s, %s) = %d\n", ref.GetSequenceAt(ref_id),
+          //        read.GetSequenceAt(i), result.editDistance);
+                  
+          if(flag & (1<<result.editDistance)) flag |= 1; // last bit means repeat
+          flag |= 1<<result.editDistance;
 
-          isMapped = true;
-          break;
+          TripleType triple = {ref_id, i, result.editDistance};
+          
+          if(candidateCount >= candidateLimit) break;
+          repeat_hits.emplace_back(triple);   
+          candidateCount++;    
         }
       }
       edlibFreeAlignResult(result);
       topHits.pop();
-      ref_count++;
     }
+    
+    if(repeat_hits.size() == 0){
+      invalid_mapping_count_++;
+      return 0;
+    }
+
+    // Sort the vector by the edit distance
+    std::sort(repeat_hits.begin(), repeat_hits.end(), 
+              [](const TripleType& a, const TripleType& b) {
+                  return std::get<2>(a) < std::get<2>(b);
+              });
+    
+    if(flag & 1){
+        float x, y;
+        float x0, y0;
+        if (sscanf(ref.GetSequenceCommentAt(std::get<0>(repeat_hits[0])), "%f %f", &x0, &y0) != 2){
+          std::cout << "sscanf failed" << std::endl;
+        }
+          for(auto it = repeat_hits.begin() + 1; it != repeat_hits.end(); ++it) {
+              auto& triple = *it;
+              if (sscanf(ref.GetSequenceCommentAt(std::get<0>(triple)), "%f %f", &x, &y) == 2){
+                if(x0 - x < 2 && x - x0 < 2 && y0 - y < 2 && y - y0 < 2){
+                  x0 = (x0 + x) / 2.0;
+                  y0 = (y0 + y) / 2.0;
+                  isMapped = true;
+                  // replace ref in vicinity with the average of the two
+
+                  // std::cout << "x0: " << x0 << " y0: " << y0  << "\t" << ref.GetSequenceCommentAt(std::get<0>(repeat_hits[0])) << "\tedit_distance(" << ref.GetSequenceAt(std::get<0>(repeat_hits[0])) << ", " << read.GetSequenceAt(std::get<1>(repeat_hits[0])) << ") = " << std::get<2>(repeat_hits[0]) << std::endl;
+                  // std::cout << "x: " << x << " y: " << y  << "\t" << ref.GetSequenceCommentAt(std::get<0>(triple)) << "\tedit_distance(" << ref.GetSequenceAt(std::get<0>(triple)) << ", " << read.GetSequenceAt(std::get<1>(triple)) << ") = " << std::get<2>(triple) << "\n" <<std::endl;
+                  }
+                else {
+                  //isMapped = false;
+                  break;
+                }
+                  }else {
+                    std::cout << "sscanf failed" << std::endl;
+                  }
+            }
+          }else isMapped = true; // no repeat
+
     if (!isMapped) invalid_mapping_count_++;
     if (isMapped) valid_mapping_count_++;
-//     if (!isMapped) {
-// #pragma omp critical
-//       { unmapped_reads_.emplace_back(read.GetSequenceAt(i)); }
-// #pragma omp atomic
-//       invalid_mapping_count_++;
-//     }
-//     if (isMapped) {
-// #pragma omp atomic
-//       valid_mapping_count_++;
-//     }
     return 3;
   }
   return -1;

@@ -21,8 +21,8 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
   const double real_start_time = GetRealTime();
 
   std::vector<Seed> seeds;
-  seeds.reserve(reference.GetNumSequences() *
-                (reflen - 2 * offset_ - kmer_size_ + 1));
+  int num_seeds_per_sequence = ((reflen_ - 2 * offset_ - kmer_size_ + winsize_ - 1)/winsize_);
+  seeds.reserve(reference.GetNumSequences() * num_seeds_per_sequence);
   std::cerr << "Collecting seeds.\n";
 
   // SeedGenerator seed_generator(offset_, kmer_size_, winsize_, length_);
@@ -31,13 +31,13 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
   //   seed_generator.GenerateSeeds(reference, sequence_index, seeds);
   // } 
 std::vector<std::vector<Seed>> seeds_per_thread(num_threads_); 
-size_t estimated_size = reference.GetNumSequences() * (reflen - 2 * offset_ - kmer_size_ + 1) / num_threads_;
+size_t estimated_size = (reference.GetNumSequences() * num_seeds_per_sequence) / num_threads_;
 
 for (auto& seed_vector : seeds_per_thread) {
     seed_vector.reserve(estimated_size);
 }
 // Thread-local instance of SeedGenerator
-SeedGenerator local_seed_generator(offset_, kmer_size_, winsize_, length_);
+SeedGenerator local_seed_generator(offset_, kmer_size_, winsize_, reflen_);
 
 #pragma omp parallel for shared(seeds_per_thread)
 for (uint32_t sequence_index = 0; sequence_index < num_sequences; ++sequence_index) {
@@ -135,8 +135,8 @@ void Index::CheckIndex(uint32_t num_sequences,
                        const SequenceBatch &reference) const {
   std::vector<Seed> seeds;
   seeds.reserve(reference.GetNumSequences() *
-                (reflen - 2 * offset_ - kmer_size_ + 1));
-  SeedGenerator seed_generator(offset_, kmer_size_, winsize_, length_);
+                (reflen_ - 2 * offset_ - kmer_size_ + 1));
+  SeedGenerator seed_generator(offset_, kmer_size_, winsize_, reflen_);
   for (uint32_t sequence_index = 0; sequence_index < num_sequences;
        ++sequence_index) {
     seed_generator.GenerateSeeds(reference, sequence_index, seeds);

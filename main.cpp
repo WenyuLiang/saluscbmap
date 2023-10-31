@@ -26,28 +26,28 @@ constexpr uint32_t kmer_size = 13;
 constexpr uint32_t winsize = 0;
 constexpr uint32_t offset = 3;
 constexpr uint32_t margin = 5;
-constexpr uint32_t edit_distance = 4;
+constexpr uint32_t edit_distance = 3;
 constexpr uint32_t threads = 16;
 
 void usage(char *exec) {
   fprintf(stderr,
           "SYNOPSIS\n"
-          " Mapped barcodes to whitelist and correct barcodes\n"
+          " Mapped barcodes to spatial.fa and correct barcodes\n"
           "\n"
           "USAGE\n"
-          " %s [-r whitelist] [-b barcode] [-o output] [-k kmer_size] [-w "
+          " %s [-r spatial.fa] [-b barcode] [-o output] [-k kmer_size] [-w "
           "winsize] [-s offset] [-m margin] [-e edit_distance] [-h]\n"
           "\n"
           "OPTIONS\n"
-          " -r input          Specify whitelist.fa\n"
+          " -r input          Specify spatial.fa\n"
           " -b barcode        Specify barcode.fq\n"
           " -o output         Specify output file or location\n"
           " -k kmer_size      Specify kmer size (default: 13)\n"
           " -w winsize        Specify window size (default: 0)\n"
           " -s offset         Specify offset value (default: 3)\n"
           " -m margin         Specify margin value (default: 5)\n"
-          " -e edit_distance  Specify edit distance value (default: 4)\n"
-          " -t threads        Specify number of threads (default: 8)\n"
+          " -e edit_distance  Specify edit distance value (default: 3)\n"
+          " -t threads        Specify number of threads (default: 16)\n"
           " -h                Display program help and usage\n",
           exec);
 }
@@ -99,17 +99,16 @@ int main(int argc, char *argv[]) {
   // --------------------------------------------construct index for
   // reference---------------------------------------//
   omp_set_num_threads(opt.threads);
-  IndexParameters index_parameters = {opt.kmer, opt.offset, opt.winsize + 1, opt.threads, opt.whitelist,
-                                      "test.idx"};
+  IndexParameters index_parameters = {opt.kmer, opt.offset, opt.winsize + 1, opt.threads, opt.whitelist};
   Index index(index_parameters);
 
   SequenceBatch ref_batch;
   ref_batch.InitializeLoading(index_parameters.reference_file_path);
   ref_batch.LoadAllSequences();
-
+  
   index.Construct(ref_batch.GetNumSequences(), ref_batch);
-  // index.CheckIndex(ref_batch.GetNumSequences(), ref_batch);
   ref_batch.FinalizeLoading();
+  
   // exit(1);
 
   // --------------------------------------------construct index for
@@ -120,38 +119,6 @@ int main(int argc, char *argv[]) {
   SequenceBatch read_batch;
   read_batch.InitializeLoading(opt.barcode);
   read_batch.LoadAllSequences();
-  //MappingMetadata read_metadata(opt.margin);
-  // MappingMetadata read_metadata;
-  // Align align(opt.editD);
-  // align.unmapped_reads_.reserve(read_batch.GetNumSequences());
-  // SeedGenerator seed_generator(opt.offset, opt.kmer, 30); 
-  // for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
-  //   read_metadata.PrepareForMappingNextRead(20);
-  //   seed_generator.GenerateSeeds(read_batch, i, read_metadata.seed_);
-  //   int numCandidatePositions = index.GenerateCandidatePositions(
-  //       read_metadata, ref_batch, read_batch, i);
-  //   std::cout << "numCandidatePositions: " << numCandidatePositions
-  //             << std::endl;
-  //    //align.CandidateRef(read_metadata, ref_batch, read_batch, i); 
-  // }
-
-  // MappingMetadata read_metadata;
-  //   Align align(4);
-  //   align.unmapped_reads_.reserve(read_batch.GetNumSequences());
-  //   // int map = 0;
-  //   for(uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
-  //       read_metadata.PrepareForMappingNextRead(20);
-  //       SeedGenerator seed_generator(opt.offset, opt.kmer, 30);
-  //       // std::cout << "kmer_size: " << kmer_size << std::endl;
-  //       // std::cout << "offset: " << offset << std::endl;
-        
-  //       seed_generator.GenerateSeeds(read_batch, i, read_metadata.seed_);
-  //       //std::cout << "seed num: "<<read_metadata.seed_.size()<< std::endl;
-  //       int numCandidatePositions = index.GenerateCandidatePositions(read_metadata, ref_batch, read_batch, i);
-  //       std::cout << "numCandidatePositions: " << numCandidatePositions << std::endl;
-  //       align.CandidateRef(read_metadata, ref_batch, read_batch, i);
-  //   }
-     
 
 MappingMetadata read_metadata(opt.margin);
 SeedGenerator seed_generator(opt.offset, opt.kmer, opt.winsize + 1, 30); // for loop update seed_generator

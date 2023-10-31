@@ -8,7 +8,7 @@
 #include <queue>
 #include <string>
 #include <vector>
-#define reflen 30
+
 
 struct IndexParameters {
   int kmer_size = 9;
@@ -16,26 +16,24 @@ struct IndexParameters {
   int winsize = 1;
   int num_threads = 16;
   std::string reference_file_path;
-  std::string index_output_file_path;
 };
 
 class Index {
 public:
   Index() = delete;
 
-  // For read mapping.
-  Index(const std::string &index_file_path)
-      : index_file_path_(index_file_path) {
-    lookup_table_ = kh_init(k64);
-  }
+  // // For read mapping.
+  // Index(const std::string &index_file_path)
+  //     : index_file_path_(index_file_path) {
+  //   lookup_table_ = kh_init(k64);
+  // }
 
   // For index construction.
   Index(const IndexParameters &index_parameters)
       : offset_(index_parameters.offset),
         kmer_size_(index_parameters.kmer_size),
         winsize_(index_parameters.winsize), 
-        num_threads_(index_parameters.num_threads),
-        index_file_path_(index_parameters.index_output_file_path) {
+        num_threads_(index_parameters.num_threads) {
     lookup_table_ = kh_init(k64);
   }
 
@@ -81,10 +79,9 @@ private:
   int kmer_size_ = 9;
   int offset_ = 0;
   int winsize_ = 1;
-  int length_ = 30;
+  int reflen_ = 30;
   // Number of threads to build the index, which is not used right now.
   int num_threads_ = 16;
-  const std::string index_file_path_;
   khash_t(k64) *lookup_table_ = nullptr;
 
   std::vector<uint64_t> occurrence_table_;

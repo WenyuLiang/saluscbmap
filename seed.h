@@ -6,6 +6,8 @@
 
 #include "sequence_batch.h"
 
+constexpr uint64_t generateNumber(int n) { return (1 << (n * 2 + 1)) - 1; }
+
 class Seed {
 public:
   Seed() = delete;

@@ -18,7 +18,7 @@ void SequenceBatch::FinalizeLoading() {
 
 void SequenceBatch::LoadAllSequences() {
   double real_start_time = GetRealTime();
-  sequence_batch_.reserve(26428997);
+  sequence_batch_.reserve(30000000);
   num_loaded_sequences_ = 0;
   num_bases_ = 0;
   int length = kseq_read(sequence_kseq_);
@@ -27,7 +27,7 @@ void SequenceBatch::LoadAllSequences() {
       sequence_batch_.emplace_back((kseq_t *)calloc(1, sizeof(kseq_t)));
       kseq_t *sequence = sequence_batch_.back();
       std::swap(sequence_kseq_->seq, sequence->seq);
-      std::swap(sequence_kseq_->name, sequence->name);
+      std::swap(sequence_kseq_->name, sequence->name);     
       std::swap(sequence_kseq_->comment, sequence->comment);
       if (sequence_kseq_->qual.l != 0) { // fastq file
         std::swap(sequence_kseq_->qual, sequence->qual);

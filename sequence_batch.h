@@ -40,12 +40,16 @@ public:
     return sequence_batch_[sequence_index]->seq.s;
   }
 
-  inline uint32_t GetSequenceLengthAt(uint32_t sequence_index) const {
+  inline const uint32_t GetSequenceLengthAt(uint32_t sequence_index) const {
     return sequence_batch_[sequence_index]->seq.l;
   }
 
   inline const char *GetSequenceNameAt(uint32_t sequence_index) const {
     return sequence_batch_[sequence_index]->name.s;
+  }
+
+  inline const char *GetSequenceCommentAt(uint32_t sequence_index) const {
+    return sequence_batch_[sequence_index]->comment.s;
   }
 
   inline uint32_t GetSequenceNameLengthAt(uint32_t sequence_index) const {
