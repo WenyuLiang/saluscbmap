@@ -157,8 +157,8 @@ int main(int argc, char *argv[]) {
             << std::endl;
 
   std::cerr << "Writing output files..." << std::endl;
-  std::string outbc = opt.output + "_bc.txt";
-  std::string outwl = opt.output + "_wl.txt";
+  std::string outbc = opt.output + "_bc.fa";
+  std::string outwl = opt.output + "_spatial.txt";
   std::ofstream bc(outbc);
   std::ofstream wl(outwl);
   for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
@@ -174,5 +174,6 @@ int main(int argc, char *argv[]) {
   }
   bc.close();
   wl.close();
+  std::cerr << "Done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
   return 0;
 }

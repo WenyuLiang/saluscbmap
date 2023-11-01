@@ -43,9 +43,9 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
           valid_mapping_count_++;
           edlibFreeAlignResult(result);
 #pragma omp critical
-          {
-            ref.ref_sequence_keep_[ref_id] = true;
+          {  
             if (!ref.ref_sequence_keep_modified_[ref_id]) {
+              ref.ref_sequence_keep_[ref_id] = true;
               ref.ref_sequence_keep_modified_[ref_id] = true;
             }
           }
@@ -115,10 +115,12 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
         ref_ids.emplace_back(ref_id_0);
         std::sort(ref_ids.begin(), ref_ids.end());
 #pragma omp critical
-        {
-          ref.ref_sequence_keep_[ref_ids[0]] = true;
-          if (!ref.ref_sequence_keep_modified_[ref_ids[0]])
+        {        
+          if (!ref.ref_sequence_keep_modified_[ref_ids[0]]){
+            ref.ref_sequence_keep_[ref_ids[0]] = true;
             ref.ref_sequence_keep_modified_[ref_ids[0]] = true;
+          }
+            
           for (auto it = ref_ids.begin() + 1; it != ref_ids.end(); ++it) {
             ref.ref_sequence_keep_[*it] = false;
             if (!ref.ref_sequence_keep_modified_[*it])
@@ -131,6 +133,7 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
     } else { // no repeat
       isMapped = true;
     }
+    //if(!flag&1) isMapped = true; // no repeat, true anyway
 
     if (isMapped) {
       for (auto it = repeat_hits.begin(); it != repeat_hits.end(); ++it) {
