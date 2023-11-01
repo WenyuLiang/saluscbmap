@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
   index.Construct(ref_batch.GetNumSequences(), ref_batch);
   ref_batch.FinalizeLoading();
 
-  //exit(1);
+  // exit(1);
 
   // --------------------------------------------construct index for
   // reference---------------------------------------//
@@ -147,10 +147,6 @@ int main(int argc, char *argv[]) {
     local_valid_count += local_align.valid_mapping_count_;
   }
 
-  // Update the align object with the aggregated results
-  //  align.invalid_mapping_count_ += local_invalid_count;
-  //  align.valid_mapping_count_ += local_valid_count;
-
   read_batch.FinalizeLoading();
   // local_invalid_count and local_valid_count are now the total counts
   std::cout << "map: " << local_valid_count << std::endl;
@@ -160,21 +156,20 @@ int main(int argc, char *argv[]) {
                    (local_valid_count + local_invalid_count)
             << std::endl;
 
-
   std::cerr << "Writing output files..." << std::endl;
   std::string outbc = opt.output + "_bc.txt";
   std::string outwl = opt.output + "_wl.txt";
   std::ofstream bc(outbc);
   std::ofstream wl(outwl);
   for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
-    bc << read_batch.GetSequenceNameAt(i) << "\t"
-         << read_batch.GetSequenceAt(i) << "\n";
+    bc << ">" << read_batch.GetSequenceNameAt(i) << "\n"
+       << read_batch.GetSequenceAt(i) << "\n";
   }
 
   for (uint32_t i = 0; i < ref_batch.GetNumSequences(); ++i) {
-    if (ref_batch.ref_sequence_keep_[i]){
-      wl << ref_batch.GetSequenceNameAt(i) << "\t"
-         << ref_batch.GetSequenceAt(i) << "\n";
+    if (ref_batch.ref_sequence_keep_[i]) {
+      wl << ref_batch.GetSequenceAt(i) << " "
+         << ref_batch.GetSequenceCommentAt(i) << "\n";
     }
   }
   bc.close();

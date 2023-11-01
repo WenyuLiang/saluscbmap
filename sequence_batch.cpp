@@ -1,9 +1,9 @@
 // batch.cpp
 #include "sequence_batch.h"
 #include "utils.h"
-#include <tuple>
 #include <algorithm>
 #include <cstring>
+#include <tuple>
 void SequenceBatch::InitializeLoading(const std::string &sequence_file_path) {
   sequence_file_ = gzopen(sequence_file_path.c_str(), "r");
   if (sequence_file_ == NULL) {
@@ -33,7 +33,7 @@ void SequenceBatch::LoadAllRefSequences() {
       if (sequence_kseq_->qual.l != 0) { // fastq file
         std::swap(sequence_kseq_->qual, sequence->qual);
       }
-      
+
       if (sequence->comment.l == 0) {
         std::string name(sequence->name.s);
         // replace name with id to save memory
@@ -41,32 +41,33 @@ void SequenceBatch::LoadAllRefSequences() {
         free(sequence->name.s);
         sequence->name.l = sequence->name.m = 1;
         sequence->name.s = strdup("0");
-        //replace name with id to save memory
+        // replace name with id to save memory
 
         size_t lastUnderscore = std::string::npos;
         size_t secondLastUnderscore = std::string::npos;
 
         // Find the positions of the last two underscores in a single pass
-        for (size_t i = name.length(); i-- > 0; ) {
-            if (name[i] == '_') {
-                if (lastUnderscore == std::string::npos) {
-                    lastUnderscore = i;
-                } else {
-                    secondLastUnderscore = i;
-                    break;
-                }
+        for (size_t i = name.length(); i-- > 0;) {
+          if (name[i] == '_') {
+            if (lastUnderscore == std::string::npos) {
+              lastUnderscore = i;
+            } else {
+              secondLastUnderscore = i;
+              break;
             }
+          }
         }
 
         if (secondLastUnderscore != std::string::npos) {
-            std::string coordinates = name.substr(secondLastUnderscore + 1, name.length());        
-            // Replace underscores with spaces
-            std::replace(coordinates.begin(), coordinates.end(), '_', ' ');
-            // Assign the extracted coordinates to the comment
-            sequence->comment.s = strdup(coordinates.c_str());
-            sequence->comment.l = coordinates.length();
+          std::string coordinates =
+              name.substr(secondLastUnderscore + 1, name.length());
+          // Replace underscores with spaces
+          std::replace(coordinates.begin(), coordinates.end(), '_', ' ');
+          // Assign the extracted coordinates to the comment
+          sequence->comment.s = strdup(coordinates.c_str());
+          sequence->comment.l = coordinates.length();
         }
-}
+      }
       sequence->id = total_num_loaded_sequences_;
       ++total_num_loaded_sequences_;
       ++num_loaded_sequences_;
