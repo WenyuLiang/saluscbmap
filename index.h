@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-
 struct IndexParameters {
   int kmer_size = 9;
   int offset = 4;
@@ -32,7 +31,7 @@ public:
   Index(const IndexParameters &index_parameters)
       : offset_(index_parameters.offset),
         kmer_size_(index_parameters.kmer_size),
-        winsize_(index_parameters.winsize), 
+        winsize_(index_parameters.winsize),
         num_threads_(index_parameters.num_threads) {
     lookup_table_ = kh_init(k64);
   }

@@ -53,7 +53,8 @@ void usage(char *exec) {
 }
 
 int main(int argc, char *argv[]) {
-  opt_t opt = {"", "", "", kmer_size, winsize, offset, margin, edit_distance, threads};
+  opt_t opt = {
+      "", "", "", kmer_size, winsize, offset, margin, edit_distance, threads};
   int opt_;
   if (argc == 1) {
     usage(argv[0]);
@@ -99,17 +100,18 @@ int main(int argc, char *argv[]) {
   // --------------------------------------------construct index for
   // reference---------------------------------------//
   omp_set_num_threads(opt.threads);
-  IndexParameters index_parameters = {opt.kmer, opt.offset, opt.winsize + 1, opt.threads, opt.whitelist};
+  IndexParameters index_parameters = {opt.kmer, opt.offset, opt.winsize + 1,
+                                      opt.threads, opt.whitelist};
   Index index(index_parameters);
 
   SequenceBatch ref_batch;
   ref_batch.InitializeLoading(index_parameters.reference_file_path);
-  ref_batch.LoadAllSequences();
-  
+  ref_batch.LoadAllRefSequences();
+
   index.Construct(ref_batch.GetNumSequences(), ref_batch);
   ref_batch.FinalizeLoading();
-  
-  // exit(1);
+
+  //exit(1);
 
   // --------------------------------------------construct index for
   // reference---------------------------------------//
@@ -118,51 +120,64 @@ int main(int argc, char *argv[]) {
   // reads---------------------------------------//
   SequenceBatch read_batch;
   read_batch.InitializeLoading(opt.barcode);
-  read_batch.LoadAllSequences();
+  read_batch.LoadAllReadSequences();
 
-MappingMetadata read_metadata(opt.margin);
-SeedGenerator seed_generator(opt.offset, opt.kmer, opt.winsize + 1, 30); // for loop update seed_generator
+  MappingMetadata read_metadata(opt.margin);
+  SeedGenerator seed_generator(opt.offset, opt.kmer, opt.winsize + 1,
+                               30); // for loop update seed_generator
 
-// Local variables for reduction
-uint32_t local_invalid_count = 0;
-uint32_t local_valid_count = 0;
+  // Local variables for reduction
+  uint32_t local_invalid_count = 0;
+  uint32_t local_valid_count = 0;
 
-#pragma omp parallel for firstprivate(seed_generator, read_metadata) \
-    reduction(+:local_invalid_count, local_valid_count) \
+#pragma omp parallel for firstprivate(seed_generator, read_metadata)           \
+    reduction(+ : local_invalid_count, local_valid_count)                      \
     shared(opt, ref_batch, read_batch)
-for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
-    Align local_align(opt.editD);  // Create a private instance of Align for each thread
+  for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
+    Align local_align(
+        opt.editD); // Create a private instance of Align for each thread
     read_metadata.PrepareForMappingNextRead(20);
     seed_generator.GenerateSeeds(read_batch, i, read_metadata.seed_);
     int numCandidatePositions = index.GenerateCandidatePositions(
         read_metadata, ref_batch, read_batch, i);
     local_align.CandidateRef(read_metadata, ref_batch, read_batch, i);
-    
+
     // Update local counters
     local_invalid_count += local_align.invalid_mapping_count_;
     local_valid_count += local_align.valid_mapping_count_;
-}
+  }
 
-//Update the align object with the aggregated results
-// align.invalid_mapping_count_ += local_invalid_count;
-// align.valid_mapping_count_ += local_valid_count;
+  // Update the align object with the aggregated results
+  //  align.invalid_mapping_count_ += local_invalid_count;
+  //  align.valid_mapping_count_ += local_valid_count;
 
-read_batch.FinalizeLoading();
-// local_invalid_count and local_valid_count are now the total counts
-std::cout << "map: " << local_valid_count << std::endl;
-std::cout << "unmap: " << local_invalid_count << std::endl;
-std::cout << "valid_bc_p: "
-          << static_cast<float>(local_valid_count) /
-                 (local_valid_count + local_invalid_count)
-          << std::endl;
+  read_batch.FinalizeLoading();
+  // local_invalid_count and local_valid_count are now the total counts
+  std::cout << "map: " << local_valid_count << std::endl;
+  std::cout << "unmap: " << local_invalid_count << std::endl;
+  std::cout << "valid_bc_p: "
+            << static_cast<float>(local_valid_count) /
+                   (local_valid_count + local_invalid_count)
+            << std::endl;
 
-  // write unmapped seq
-  // std::ofstream unmapped("unmapped.txt");
-  // for (const auto &read_name : align.unmapped_reads_) {
-  //   unmapped << read_name << "\n";
-  // }
-  // unmapped.close();
-  // --------------------------------------------process
-  // reads---------------------------------------//
+
+  std::cerr << "Writing output files..." << std::endl;
+  std::string outbc = opt.output + "_bc.txt";
+  std::string outwl = opt.output + "_wl.txt";
+  std::ofstream bc(outbc);
+  std::ofstream wl(outwl);
+  for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
+    bc << read_batch.GetSequenceNameAt(i) << "\t"
+         << read_batch.GetSequenceAt(i) << "\n";
+  }
+
+  for (uint32_t i = 0; i < ref_batch.GetNumSequences(); ++i) {
+    if (ref_batch.ref_sequence_keep_[i]){
+      wl << ref_batch.GetSequenceNameAt(i) << "\t"
+         << ref_batch.GetSequenceAt(i) << "\n";
+    }
+  }
+  bc.close();
+  wl.close();
   return 0;
 }

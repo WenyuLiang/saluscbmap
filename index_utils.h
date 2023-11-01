@@ -1,10 +1,10 @@
 #ifndef INDEX_UTILS_H_
 #define INDEX_UTILS_H_
+#include "khash.h"
 #include <cstdint>
 #include <limits>
-#include <vector>
-#include "khash.h"
 #include <queue>
+#include <vector>
 // Note that the max kmer size is 28 and its hash value is always saved in the
 // lowest 56 bits of an unsigned 64-bit integer. When an element is inserted
 // into the hash table, its hash value is left shifted by 1 bit and the lowest

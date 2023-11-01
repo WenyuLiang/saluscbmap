@@ -2,10 +2,10 @@
 
 #include <assert.h>
 
+#include "seed.h"
 #include <algorithm>
 #include <iostream>
 #include <omp.h>
-#include "seed.h"
 
 // static inline void printBinary(uint64_t num) {
 //     for (uint64_t i = 63; i != static_cast<uint64_t>(-1); --i) {
@@ -21,34 +21,38 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
   const double real_start_time = GetRealTime();
 
   std::vector<Seed> seeds;
-  int num_seeds_per_sequence = ((reflen_ - 2 * offset_ - kmer_size_ + winsize_ - 1)/winsize_);
+  int num_seeds_per_sequence =
+      ((reflen_ - 2 * offset_ - kmer_size_ + winsize_ - 1) / winsize_);
   seeds.reserve(reference.GetNumSequences() * num_seeds_per_sequence);
   std::cerr << "Collecting seeds.\n";
 
   // SeedGenerator seed_generator(offset_, kmer_size_, winsize_, length_);
   // for (uint32_t sequence_index = 0; sequence_index < num_sequences;
-  //      ++sequence_index) { 
+  //      ++sequence_index) {
   //   seed_generator.GenerateSeeds(reference, sequence_index, seeds);
-  // } 
-std::vector<std::vector<Seed>> seeds_per_thread(num_threads_); 
-size_t estimated_size = (reference.GetNumSequences() * num_seeds_per_sequence) / num_threads_;
+  // }
+  std::vector<std::vector<Seed>> seeds_per_thread(num_threads_);
+  size_t estimated_size =
+      (reference.GetNumSequences() * num_seeds_per_sequence) / num_threads_;
 
-for (auto& seed_vector : seeds_per_thread) {
+  for (auto &seed_vector : seeds_per_thread) {
     seed_vector.reserve(estimated_size);
-}
-// Thread-local instance of SeedGenerator
-SeedGenerator local_seed_generator(offset_, kmer_size_, winsize_, reflen_);
+  }
+  // Thread-local instance of SeedGenerator
+  SeedGenerator local_seed_generator(offset_, kmer_size_, winsize_, reflen_);
 
 #pragma omp parallel for shared(seeds_per_thread)
-for (uint32_t sequence_index = 0; sequence_index < num_sequences; ++sequence_index) {
+  for (uint32_t sequence_index = 0; sequence_index < num_sequences;
+       ++sequence_index) {
     int thread_id = omp_get_thread_num();
-    local_seed_generator.GenerateSeeds(reference, sequence_index, seeds_per_thread[thread_id]);
-}
- 
-// Merge seeds from all threads
-for (const auto& thread_seeds : seeds_per_thread) {
+    local_seed_generator.GenerateSeeds(reference, sequence_index,
+                                       seeds_per_thread[thread_id]);
+  }
+
+  // Merge seeds from all threads
+  for (const auto &thread_seeds : seeds_per_thread) {
     seeds.insert(seeds.end(), thread_seeds.begin(), thread_seeds.end());
-}
+  }
 
   std::cerr << "Collected " << seeds.size() << " seeds.\n";
   std::cerr << "Sorting seeds.\n";
@@ -61,7 +65,8 @@ for (const auto& thread_seeds : seeds_per_thread) {
   // so that I can use int to store position later.
   assert(num_seeds <= static_cast<size_t>(INT_MAX));
   occurrence_table_.reserve(num_seeds);
-  kh_resize(k64, lookup_table_, num_seeds>>8); //estimate the size of the hash table
+  kh_resize(k64, lookup_table_,
+            num_seeds >> 8); // estimate the size of the hash table
   uint64_t previous_lookup_hash = GenerateHashInLookupTable(seeds[0].GetHash());
   uint32_t num_previous_seed_occurrences = 0;
   uint64_t num_nonsingletons = 0;
@@ -173,7 +178,7 @@ int Index::GenerateCandidatePositions(MappingMetadata &mapping_metadata,
                                       SequenceBatch &ref, SequenceBatch &read,
                                       uint32_t &i) const {
   const size_t num_seeds = mapping_metadata.GetNumSeeds();
-  const std::vector<Seed> &seeds = mapping_metadata.seed_; // seeds for a read 
+  const std::vector<Seed> &seeds = mapping_metadata.seed_; // seeds for a read
   for (size_t mi = 0; mi < num_seeds; ++mi) {
     khiter_t khash_iterator = kh_get(
         k64, lookup_table_, GenerateHashInLookupTable(seeds[mi].GetHash()));
@@ -194,7 +199,7 @@ int Index::GenerateCandidatePositions(MappingMetadata &mapping_metadata,
       // continue;
       uint32_t offset = GenerateOffsetInOccurrenceTable(lookup_value);
       uint32_t num_occ = GenerateNumOccurrenceInOccurrenceTable(lookup_value);
-      
+
       for (uint32_t j = 0; j < num_occ; ++j) {
         const uint64_t candidate_position = GenerateCandidatePositionFromHits(
             mapping_metadata, /*reference_hit=*/occurrence_table_[offset + j],
@@ -239,10 +244,10 @@ Index::GenerateCandidatePositionFromHits(MappingMetadata &mapping_metadata,
   // candidate position. Instead, we do it later some time when we check the
   // candidates.
   const int reference_start_position = reference_position - read_position;
-  const uint64_t reference_id = HitToSequenceIndex(reference_hit); 
+  const uint64_t reference_id = HitToSequenceIndex(reference_hit);
 
   if (reference_start_position > mapping_metadata.margin_ ||
-  -reference_start_position > mapping_metadata.margin_) {
+      -reference_start_position > mapping_metadata.margin_) {
     // std::cout << "ref pos: " <<reference_position << " read pos: " <<
     // read_position<< " reference_start_position: " << reference_start_position
     // << " mapping_metadata.margin_ " << mapping_metadata.margin_<< std::endl;
