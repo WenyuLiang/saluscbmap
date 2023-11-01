@@ -132,21 +132,30 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
       }
     } else { // no repeat
       isMapped = true;
-    }
-    //if(!flag&1) isMapped = true; // no repeat, true anyway
-
-    if (isMapped) {
-      for (auto it = repeat_hits.begin(); it != repeat_hits.end(); ++it) {
-        auto &triple = *it;
-        // print info
-        std::cout << ref.GetSequenceCommentAt(std::get<0>(triple))
-                  << "\tedit_distance("
-                  << ref.GetSequenceAt(std::get<0>(triple)) << ", "
-                  << read.GetSequenceAt(std::get<1>(triple))
-                  << ") = " << std::get<2>(triple) << std::endl;
+      uint32_t ref_id_0 = std::get<0>(repeat_hits[0]); // first hit
+      read.ModifySequenceAt(i, ref.GetSequenceAt(ref_id_0),
+                              ref.GetSequenceLengthAt(ref_id_0));
+#pragma omp critical
+      {        
+        if (!ref.ref_sequence_keep_modified_[ref_id_0]){
+          ref.ref_sequence_keep_[ref_id_0] = true;
+          ref.ref_sequence_keep_modified_[ref_id_0] = true;
+        }
       }
-      std::cout << "\n" << std::endl;
     }
+
+    // if (isMapped) {
+    //   for (auto it = repeat_hits.begin(); it != repeat_hits.end(); ++it) {
+    //     auto &triple = *it;
+    //     // print info
+    //     std::cout << ref.GetSequenceCommentAt(std::get<0>(triple))
+    //               << "\tedit_distance("
+    //               << ref.GetSequenceAt(std::get<0>(triple)) << ", "
+    //               << read.GetSequenceAt(std::get<1>(triple))
+    //               << ") = " << std::get<2>(triple) << std::endl;
+    //   }
+    //   std::cout << "\n" << std::endl;
+    // }
 
     if (!isMapped)
       invalid_mapping_count_++;

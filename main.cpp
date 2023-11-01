@@ -22,8 +22,8 @@ typedef struct {
   uint32_t threads;
 } opt_t;
 
-constexpr uint32_t kmer_size = 13;
-constexpr uint32_t winsize = 0;
+constexpr uint32_t kmer_size = 11;
+constexpr uint32_t winsize = 5;
 constexpr uint32_t offset = 3;
 constexpr uint32_t margin = 5;
 constexpr uint32_t edit_distance = 3;
@@ -41,9 +41,9 @@ void usage(char *exec) {
           "OPTIONS\n"
           " -r input          Specify spatial.fa\n"
           " -b barcode        Specify barcode.fq\n"
-          " -o output         Specify output file or location\n"
-          " -k kmer_size      Specify kmer size (default: 13)\n"
-          " -w winsize        Specify window size (default: 0)\n"
+          " -o output         Specify output file prefix or location\n"
+          " -k kmer_size      Specify kmer size (default: 11)\n"
+          " -w winsize        Specify window size (default: 5)\n"
           " -s offset         Specify offset value (default: 3)\n"
           " -m margin         Specify margin value (default: 5)\n"
           " -e edit_distance  Specify edit distance value (default: 3)\n"
