@@ -22,7 +22,7 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
 
   std::vector<Seed> seeds;
   int num_seeds_per_sequence =
-      ((reflen_ - 2 * offset_ - kmer_size_ + winsize_ - 1) / winsize_);
+      ((reference.GetSequenceLengthAt(0) - 2 * offset_ - kmer_size_ + winsize_ - 1) / winsize_);
   seeds.reserve(reference.GetNumSequences() * num_seeds_per_sequence);
   std::cerr << "Collecting seeds.\n";
 
@@ -39,7 +39,7 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
     seed_vector.reserve(estimated_size);
   }
   // Thread-local instance of SeedGenerator
-  SeedGenerator local_seed_generator(offset_, kmer_size_, winsize_, reflen_);
+  SeedGenerator local_seed_generator(offset_, kmer_size_, winsize_);
 
 #pragma omp parallel for shared(seeds_per_thread)
   for (uint32_t sequence_index = 0; sequence_index < num_sequences;
@@ -141,7 +141,7 @@ void Index::CheckIndex(uint32_t num_sequences,
   std::vector<Seed> seeds;
   seeds.reserve(reference.GetNumSequences() *
                 (reflen_ - 2 * offset_ - kmer_size_ + 1));
-  SeedGenerator seed_generator(offset_, kmer_size_, winsize_, reflen_);
+  SeedGenerator seed_generator(offset_, kmer_size_, winsize_);
   for (uint32_t sequence_index = 0; sequence_index < num_sequences;
        ++sequence_index) {
     seed_generator.GenerateSeeds(reference, sequence_index, seeds);

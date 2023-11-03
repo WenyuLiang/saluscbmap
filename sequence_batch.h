@@ -16,6 +16,8 @@ public:
 
   SequenceBatch() {}
 
+  SequenceBatch(uint32_t batch_size) : batch_size_(batch_size) {}
+
   ~SequenceBatch() {
     if (sequence_batch_.size() > 0) {
       for (uint32_t i = 0; i < sequence_batch_.size(); ++i) {
@@ -29,6 +31,8 @@ public:
   void FinalizeLoading();
 
   void LoadAllRefSequences();
+
+  bool LoadBatchReadSequences();
 
   void LoadAllReadSequences();
 
@@ -78,6 +82,7 @@ private:
   uint32_t total_num_loaded_sequences_ = 0;
   uint32_t num_loaded_sequences_ = 0;
   uint64_t num_bases_ = 0;
+  uint32_t batch_size_ = 100000;
   gzFile sequence_file_;
   kseq_t *sequence_kseq_ = nullptr;
   std::vector<kseq_t *> sequence_batch_;

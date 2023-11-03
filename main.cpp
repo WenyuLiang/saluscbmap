@@ -20,6 +20,7 @@ typedef struct {
   uint32_t margin;
   uint32_t editD;
   uint32_t threads;
+  uint32_t batch_size;
 } opt_t;
 
 constexpr uint32_t kmer_size = 11;
@@ -28,6 +29,7 @@ constexpr uint32_t offset = 3;
 constexpr uint32_t margin = 5;
 constexpr uint32_t edit_distance = 3;
 constexpr uint32_t threads = 16;
+constexpr uint32_t batch_size = 100000;
 
 void usage(char *exec) {
   fprintf(stderr,
@@ -48,17 +50,18 @@ void usage(char *exec) {
           " -m margin         Specify margin value (default: 5)\n"
           " -e edit_distance  Specify edit distance value (default: 3)\n"
           " -t threads        Specify number of threads (default: 16)\n"
+          " -z batch_size     Specify batch size (default: 100000)\n"
           " -h                Display program help and usage\n",
           exec);
 }
 
 int main(int argc, char *argv[]) {
   opt_t opt = {
-      "", "", "", kmer_size, winsize, offset, margin, edit_distance, threads};
+      "", "", "", kmer_size, winsize, offset, margin, edit_distance, threads, batch_size};
   int opt_;
   if (argc == 1) {
     usage(argv[0]);
-    exit(1);
+    exit(0);
   }
   while ((opt_ = getopt(argc, argv, OPTIONS)) != -1) {
     switch (opt_) {
@@ -94,14 +97,14 @@ int main(int argc, char *argv[]) {
       exit(0);
     default:
       usage(argv[0]);
-      exit(1);
+      exit(0);
     }
   }
   // --------------------------------------------construct index for
   // reference---------------------------------------//
   omp_set_num_threads(opt.threads);
   IndexParameters index_parameters = {opt.kmer, opt.offset, opt.winsize + 1,
-                                      opt.threads, opt.whitelist};
+                                      opt.threads, opt.whitelist, opt.batch_size};
   Index index(index_parameters);
 
   SequenceBatch ref_batch;
@@ -110,70 +113,77 @@ int main(int argc, char *argv[]) {
 
   index.Construct(ref_batch.GetNumSequences(), ref_batch);
   ref_batch.FinalizeLoading();
+  //  --------------------------------------------construct index for
+  //  reference---------------------------------------//
+  std::string outbc = opt.output + "_bc.fq";
+  std::string outwl = opt.output + "_wl.txt";
 
-  // exit(1);
-
-  // --------------------------------------------construct index for
-  // reference---------------------------------------//
-
+  std::ofstream bc(outbc);
+  std::ofstream wl(outwl);
+  std::ofstream spatial(opt.output + "_spatial.txt");
+  std::ofstream stat(opt.output + "_stat.txt");
   // --------------------------------------------process
   // reads---------------------------------------//
-  SequenceBatch read_batch;
+  SequenceBatch read_batch(opt.batch_size);
   read_batch.InitializeLoading(opt.barcode);
-  read_batch.LoadAllReadSequences();
+  // read_batch.LoadAllReadSequences();
 
   MappingMetadata read_metadata(opt.margin);
-  SeedGenerator seed_generator(opt.offset, opt.kmer, opt.winsize + 1,
-                               30); // for loop update seed_generator
+  SeedGenerator seed_generator(opt.offset, opt.kmer, opt.winsize + 1); // for loop update seed_generator
 
   // Local variables for reduction
   uint32_t local_invalid_count = 0;
   uint32_t local_valid_count = 0;
-
+  bool doneLoading = false;
+  for (;;) {
+    doneLoading = read_batch.LoadBatchReadSequences();
 #pragma omp parallel for firstprivate(seed_generator, read_metadata)           \
     reduction(+ : local_invalid_count, local_valid_count)                      \
     shared(opt, ref_batch, read_batch)
-  for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
-    Align local_align(
-        opt.editD); // Create a private instance of Align for each thread
-    read_metadata.PrepareForMappingNextRead(20);
-    seed_generator.GenerateSeeds(read_batch, i, read_metadata.seed_);
-    int numCandidatePositions = index.GenerateCandidatePositions(
-        read_metadata, ref_batch, read_batch, i);
-    local_align.CandidateRef(read_metadata, ref_batch, read_batch, i);
+    for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
+      Align local_align(
+          opt.editD); // Create a private instance of Align for each thread
+      read_metadata.PrepareForMappingNextRead(20);
+      seed_generator.GenerateSeeds(read_batch, i, read_metadata.seed_);
+      int numCandidatePositions = index.GenerateCandidatePositions(
+          read_metadata, ref_batch, read_batch, i);
+      local_align.CandidateRef(read_metadata, ref_batch, read_batch, i);
 
-    // Update local counters
-    local_invalid_count += local_align.invalid_mapping_count_;
-    local_valid_count += local_align.valid_mapping_count_;
+      // Update local counters
+      local_invalid_count += local_align.invalid_mapping_count_;
+      local_valid_count += local_align.valid_mapping_count_;
+    }
+    for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
+      bc << ">" << read_batch.GetSequenceNameAt(i) << "\n" 
+         << read_batch.GetSequenceAt(i) << "\n+\n" << read_batch.GetSequenceQualAt(i) << "\n";
+    }
+    if (doneLoading)
+      break;
   }
-
   read_batch.FinalizeLoading();
+
   // local_invalid_count and local_valid_count are now the total counts
-  std::cout << "map: " << local_valid_count << std::endl;
-  std::cout << "unmap: " << local_invalid_count << std::endl;
-  std::cout << "valid_bc_p: "
+  stat << "map: " << local_valid_count << std::endl;
+  stat << "unmap: " << local_invalid_count << std::endl;
+  stat << "valid_bc_p: "
             << static_cast<float>(local_valid_count) /
                    (local_valid_count + local_invalid_count)
             << std::endl;
 
-  std::cerr << "Writing output files..." << std::endl;
-  std::string outbc = opt.output + "_bc.fa";
-  std::string outwl = opt.output + "_spatial.txt";
-  std::ofstream bc(outbc);
-  std::ofstream wl(outwl);
-  for (uint32_t i = 0; i < read_batch.GetNumSequences(); ++i) {
-    bc << ">" << read_batch.GetSequenceNameAt(i) << "\n"
-       << read_batch.GetSequenceAt(i) << "\n";
-  }
+  // std::cerr << "Writing output files..." << std::endl;
 
   for (uint32_t i = 0; i < ref_batch.GetNumSequences(); ++i) {
     if (ref_batch.ref_sequence_keep_[i]) {
-      wl << ref_batch.GetSequenceAt(i) << " "
+      spatial << ref_batch.GetSequenceAt(i) << " "
          << ref_batch.GetSequenceCommentAt(i) << "\n";
+      wl << ref_batch.GetSequenceNameAt(i) << "\n";
     }
   }
   bc.close();
   wl.close();
-  std::cerr << "Done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+  spatial.close();
+  stat.close();
+  std::cerr << "Done!!!" << std::endl;
+  std::cerr << "Releasing memory..." << std::endl;
   return 0;
 }

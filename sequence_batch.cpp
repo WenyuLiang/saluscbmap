@@ -19,7 +19,7 @@ void SequenceBatch::FinalizeLoading() {
 
 void SequenceBatch::LoadAllRefSequences() {
   double real_start_time = GetRealTime();
-  sequence_batch_.reserve(30000000);
+  sequence_batch_.reserve(90000000);
   num_loaded_sequences_ = 0;
   num_bases_ = 0;
   int length = kseq_read(sequence_kseq_);
@@ -91,37 +91,66 @@ void SequenceBatch::LoadAllRefSequences() {
   std::cerr << "number of bases: " << num_bases_ << ".\n";
 }
 
-void SequenceBatch::LoadAllReadSequences() {
-  double real_start_time = GetRealTime();
-  sequence_batch_.reserve(30000000);
-  num_loaded_sequences_ = 0;
-  num_bases_ = 0;
-  int length = kseq_read(sequence_kseq_);
-  while (length >= 0) {
-    if (length > 0) {
-      sequence_batch_.emplace_back((kseq_t *)calloc(1, sizeof(kseq_t)));
-      kseq_t *sequence = sequence_batch_.back();
-      std::swap(sequence_kseq_->seq, sequence->seq);
-      std::swap(sequence_kseq_->name, sequence->name);
-      std::swap(sequence_kseq_->comment, sequence->comment);
-      if (sequence_kseq_->qual.l != 0) { // fastq file
-        std::swap(sequence_kseq_->qual, sequence->qual);
-      }
-      sequence->id = total_num_loaded_sequences_;
-      ++total_num_loaded_sequences_;
-      ++num_loaded_sequences_;
-      num_bases_ += length;
+bool SequenceBatch::LoadBatchReadSequences() {
+  if (sequence_batch_.size() > 0) {
+    for (uint32_t i = 0; i < sequence_batch_.size(); ++i) {
+      kseq_destroy(sequence_batch_[i]);
     }
-    length = kseq_read(sequence_kseq_);
   }
-  sequence_batch_.shrink_to_fit();
-  // Make sure to reach the end of the file rather than meet an error.
-  if (length != -1) {
-    std::cerr
-        << "Didn't reach the end of sequence file, which might be corrupted!\n";
+  sequence_batch_.clear();
+  sequence_batch_.reserve(batch_size_);
+  num_loaded_sequences_ = 0;
+  // int length = kseq_read(sequence_kseq_);
+  while (num_loaded_sequences_ < batch_size_ && kseq_read(sequence_kseq_) > 0) {
+    sequence_batch_.emplace_back((kseq_t *)calloc(1, sizeof(kseq_t)));
+    kseq_t *sequence = sequence_batch_.back();
+    std::swap(sequence_kseq_->seq, sequence->seq);
+    std::swap(sequence_kseq_->name, sequence->name);
+    std::swap(sequence_kseq_->comment, sequence->comment);
+    if (sequence_kseq_->qual.l != 0) { // fastq file
+      std::swap(sequence_kseq_->qual, sequence->qual);
+    }
+    sequence->id = num_loaded_sequences_;
+    ++num_loaded_sequences_;
   }
-  std::cerr << "Loaded all sequences successfully in "
-            << GetRealTime() - real_start_time << "s, ";
-  std::cerr << "number of sequences: " << num_loaded_sequences_ << ", ";
-  std::cerr << "number of bases: " << num_bases_ << ".\n";
+  if (sequence_batch_.size() < batch_size_) {
+    return true;
+  }
+  return false; // batch full, meaning that there are more reads to be loaded
 }
+
+// void SequenceBatch::LoadAllReadSequences() {
+//   double real_start_time = GetRealTime();
+//   sequence_batch_.reserve(30000000);
+//   num_loaded_sequences_ = 0;
+//   num_bases_ = 0;
+//   int length = kseq_read(sequence_kseq_);
+//   while (length >= 0) {
+//     if (length > 0) {
+//       sequence_batch_.emplace_back((kseq_t *)calloc(1, sizeof(kseq_t)));
+//       kseq_t *sequence = sequence_batch_.back();
+//       std::swap(sequence_kseq_->seq, sequence->seq);
+//       std::swap(sequence_kseq_->name, sequence->name);
+//       std::swap(sequence_kseq_->comment, sequence->comment);
+//       if (sequence_kseq_->qual.l != 0) { // fastq file
+//         std::swap(sequence_kseq_->qual, sequence->qual);
+//       }
+//       sequence->id = total_num_loaded_sequences_;
+//       ++total_num_loaded_sequences_;
+//       ++num_loaded_sequences_;
+//       num_bases_ += length;
+//     }
+//     length = kseq_read(sequence_kseq_);
+//   }
+//   sequence_batch_.shrink_to_fit();
+//   // Make sure to reach the end of the file rather than meet an error.
+//   if (length != -1) {
+//     std::cerr
+//         << "Didn't reach the end of sequence file, which might be
+//         corrupted!\n";
+//   }
+//   std::cerr << "Loaded all sequences successfully in "
+//             << GetRealTime() - real_start_time << "s, ";
+//   std::cerr << "number of sequences: " << num_loaded_sequences_ << ", ";
+//   std::cerr << "number of bases: " << num_bases_ << ".\n";
+// }

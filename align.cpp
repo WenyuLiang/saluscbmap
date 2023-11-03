@@ -43,7 +43,7 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
           valid_mapping_count_++;
           edlibFreeAlignResult(result);
 #pragma omp critical
-          {  
+          {
             if (!ref.ref_sequence_keep_modified_[ref_id]) {
               ref.ref_sequence_keep_[ref_id] = true;
               ref.ref_sequence_keep_modified_[ref_id] = true;
@@ -102,7 +102,6 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
             isMapped = true;
             ref_ids.emplace_back(std::get<0>(triple));
           } else {
-            // isMapped = false;
             break;
           }
         } else {
@@ -115,12 +114,12 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
         ref_ids.emplace_back(ref_id_0);
         std::sort(ref_ids.begin(), ref_ids.end());
 #pragma omp critical
-        {        
-          if (!ref.ref_sequence_keep_modified_[ref_ids[0]]){
+        {
+          if (!ref.ref_sequence_keep_modified_[ref_ids[0]]) {
             ref.ref_sequence_keep_[ref_ids[0]] = true;
             ref.ref_sequence_keep_modified_[ref_ids[0]] = true;
           }
-            
+
           for (auto it = ref_ids.begin() + 1; it != ref_ids.end(); ++it) {
             ref.ref_sequence_keep_[*it] = false;
             if (!ref.ref_sequence_keep_modified_[*it])
@@ -134,10 +133,10 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
       isMapped = true;
       uint32_t ref_id_0 = std::get<0>(repeat_hits[0]); // first hit
       read.ModifySequenceAt(i, ref.GetSequenceAt(ref_id_0),
-                              ref.GetSequenceLengthAt(ref_id_0));
+                            ref.GetSequenceLengthAt(ref_id_0));
 #pragma omp critical
-      {        
-        if (!ref.ref_sequence_keep_modified_[ref_id_0]){
+      {
+        if (!ref.ref_sequence_keep_modified_[ref_id_0]) {
           ref.ref_sequence_keep_[ref_id_0] = true;
           ref.ref_sequence_keep_modified_[ref_id_0] = true;
         }

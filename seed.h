@@ -56,9 +56,8 @@ public:
   // offset: offset from both ends of the sequence
   // kmer_size_: size of the k-mer
   // length: length of the sequence
-  SeedGenerator(int offset, int kmer_size_, int winsize, int length)
-      : offset_(offset), kmer_size_(kmer_size_), winsize_(winsize),
-        length_(length) {
+  SeedGenerator(int offset, int kmer_size_, int winsize)
+      : offset_(offset), kmer_size_(kmer_size_), winsize_(winsize) {
     // 56 bits for a k-mer. So the max kmer size is 28.
     assert(kmer_size_ > 0 && kmer_size_ <= 28);
   }
@@ -72,5 +71,4 @@ private:
   const int offset_;
   const int kmer_size_;
   const int winsize_;
-  const int length_;
 };

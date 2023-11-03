@@ -15,6 +15,7 @@ struct IndexParameters {
   int winsize = 1;
   int num_threads = 16;
   std::string reference_file_path;
+  uint32_t batch_size = 1000000;
 };
 
 class Index {
