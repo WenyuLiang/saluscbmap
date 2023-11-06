@@ -1,5 +1,7 @@
 #include <cstdint>
+#include <fstream>
 #include <iostream>
+#include <string>
 // #define WIN_SIZE 4
 // void SeedGenerator::GenerateSeeds(const SequenceBatch &sequence_batch,
 //                                   uint32_t sequence_index,
@@ -91,15 +93,13 @@
 //     return (1 << n*2) - 1;
 // }
 
-typedef struct {
-  std::string input;
-  std::string output;
-  uint32_t kmer;
-  uint32_t winsize;
-  uint32_t offset;
-  uint32_t editD;
-} opt;
-int main() {
-  std::cout << "size\t" << sizeof(opt) << std::endl;
-  std::cout << "align\t" << alignof(opt) << std::endl;
-}
+// typedef struct {
+//   std::string input;
+//   std::string output;
+//   uint32_t kmer;
+//   uint32_t winsize;
+//   uint32_t offset;
+//   uint32_t editD;
+// } opt;
+
+int main() {}

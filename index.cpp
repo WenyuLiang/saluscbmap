@@ -21,8 +21,9 @@ void Index::Construct(uint32_t num_sequences, const SequenceBatch &reference) {
   const double real_start_time = GetRealTime();
 
   std::vector<Seed> seeds;
-  int num_seeds_per_sequence =
-      ((reference.GetSequenceLengthAt(0) - 2 * offset_ - kmer_size_ + winsize_ - 1) / winsize_);
+  int num_seeds_per_sequence = ((reference.GetSequenceLengthAt(0) -
+                                 2 * offset_ - kmer_size_ + winsize_ - 1) /
+                                winsize_);
   seeds.reserve(reference.GetNumSequences() * num_seeds_per_sequence);
   std::cerr << "Collecting seeds.\n";
 
