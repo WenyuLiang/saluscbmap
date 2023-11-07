@@ -1,3 +1,4 @@
+#include <climits>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -102,4 +103,11 @@
 //   uint32_t editD;
 // } opt;
 
-int main() {}
+int main() {
+  int a = 5;
+  int b = 10;
+  int max;
+
+  int greater = a - ((a - b) & ((a - b) >> (sizeof(int) * CHAR_BIT - 1)));
+  std::cout << greater << std::endl;
+}

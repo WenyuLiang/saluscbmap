@@ -31,7 +31,7 @@ void SeedGenerator::GenerateSeeds(const SequenceBatch &sequence_batch,
   // Initialize the first k-mer.
   for (uint32_t i = start; i < start + kmer_size_; ++i) {
     const uint8_t current_base = CharToUint8(sequence[i]);
-    if (current_base < 4) {
+    if (current_base < 4) [[likely]] {
       seed = (seed << 2) | current_base;
     }
     // seed_str+= sequence[i];
@@ -62,7 +62,7 @@ void SeedGenerator::GenerateSeeds(const SequenceBatch &sequence_batch,
       // Add the new base to the current k-mer.
       const uint8_t current_base =
           CharToUint8(sequence[position + (kmer_size_ - winsize_) + i]);
-      if (current_base < 4) {
+      if (current_base < 4) [[likely]] {
         seed = (seed << 2) | current_base;
       } else {
         seed = (seed << 2) | 0; // if the base is N, set it to A

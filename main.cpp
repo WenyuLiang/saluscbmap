@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
          << read_batch.GetSequenceAt(i) << "\n+\n"
          << read_batch.GetSequenceQualAt(i) << "\n";
     }
-    if (doneLoading)
+    if (doneLoading) [[unlikely]]
       break;
   }
   read_batch.FinalizeLoading();

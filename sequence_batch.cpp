@@ -30,7 +30,7 @@ void SequenceBatch::LoadAllRefSequences() {
       std::swap(sequence_kseq_->seq, sequence->seq);
       std::swap(sequence_kseq_->name, sequence->name);
       std::swap(sequence_kseq_->comment, sequence->comment);
-      if (sequence_kseq_->qual.l != 0) { // fastq file
+      if (sequence_kseq_->qual.l != 0) [[unlikely]] { // fastq file
         std::swap(sequence_kseq_->qual, sequence->qual);
       }
 
@@ -98,9 +98,7 @@ bool SequenceBatch::LoadBatchReadSequences() {
     }
   }
   sequence_batch_.clear();
-  sequence_batch_.reserve(batch_size_);
   num_loaded_sequences_ = 0;
-  // int length = kseq_read(sequence_kseq_);
   while (num_loaded_sequences_ < batch_size_ && kseq_read(sequence_kseq_) > 0) {
     sequence_batch_.emplace_back((kseq_t *)calloc(1, sizeof(kseq_t)));
     kseq_t *sequence = sequence_batch_.back();
@@ -114,6 +112,7 @@ bool SequenceBatch::LoadBatchReadSequences() {
     ++num_loaded_sequences_;
   }
   if (sequence_batch_.size() < batch_size_) {
+    sequence_batch_.shrink_to_fit();
     return true;
   }
   return false; // batch full, meaning that there are more reads to be loaded

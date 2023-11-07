@@ -1,6 +1,6 @@
 CC=g++  
 INCLUDE=-I/share/home/liangwy/biotool/zlib
-CFLAGS=-std=c++17 -g -O3 -Wall -Wextra -fopenmp -march=native
+CFLAGS=-std=c++20 -g -O3 -Wall -Wextra -fopenmp -march=native
 TARGETS=saluscbmap
 OBJS=sequence_batch.o edlib.o align.o seed.o index.o main.o
 LDFLAGS=-L/share/home/liangwy/biotool/zlib/lib -lm -lz 

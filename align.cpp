@@ -38,7 +38,7 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
                      read.GetSequenceAt(i), read.GetSequenceLengthAt(i),
                      edlibDefaultAlignConfig());
 
-      if (result.status == EDLIB_STATUS_OK) {
+      if (result.status == EDLIB_STATUS_OK) [[likely]] {
         if (result.editDistance == 0) {
           valid_mapping_count_++;
           edlibFreeAlignResult(result);
@@ -72,10 +72,10 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
     }
 
     // Sort the vector by the edit distance
-    std::sort(repeat_hits.begin(), repeat_hits.end(),
-              [](const TripleType &a, const TripleType &b) {
-                return std::get<2>(a) < std::get<2>(b);
-              });
+    std::stable_sort(repeat_hits.begin(), repeat_hits.end(),
+                     [](const TripleType &a, const TripleType &b) {
+                       return std::get<2>(a) < std::get<2>(b);
+                     });
 
     if (flag & 1) {
       float x, y;
@@ -84,7 +84,8 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
       std::vector<uint32_t> ref_ids;
       ref_ids.reserve(repeat_hits.size());
 
-      if (sscanf(ref.GetSequenceCommentAt(ref_id_0), "%f %f", &x0, &y0) != 2) {
+      if (sscanf(ref.GetSequenceCommentAt(ref_id_0), "%f %f", &x0, &y0) != 2)
+          [[likely]] {
         std::cout << "sscanf failed\t" << ref.GetSequenceCommentAt(ref_id_0)
                   << std::endl;
       }
@@ -94,8 +95,7 @@ int Align::CandidateRef(const MappingMetadata &mapping_metadata,
         // std::cout << std::get<0>(triple) << "size: " <<
         // ref.GetSequenceCommentAt(std::get<0>(triple)) << std::endl;
         if (sscanf(ref.GetSequenceCommentAt(std::get<0>(triple)), "%f %f", &x,
-                   &y) == 2) {
-          // std::cout << "yes"<< std::endl;
+                   &y) == 2) [[likely]] {
           if (x0 - x < 2 && x - x0 < 2 && y0 - y < 2 && y - y0 < 2) {
             x0 = (x0 + x) / 2.0;
             y0 = (y0 + y) / 2.0;

@@ -16,7 +16,9 @@ public:
 
   SequenceBatch() {}
 
-  SequenceBatch(uint32_t batch_size) : batch_size_(batch_size) {}
+  SequenceBatch(uint32_t batch_size) : batch_size_(batch_size) {
+    sequence_batch_.reserve(batch_size);
+  }
 
   ~SequenceBatch() {
     if (sequence_batch_.size() > 0) {
